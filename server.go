@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Country struct {
@@ -53,10 +55,41 @@ func (h *countriesHandler) get(writer http.ResponseWriter, request *http.Request
 	writer.Write(jsonBytes)
 }
 
+func (h *countriesHandler) getRandomCountry(writer http.ResponseWriter, request *http.Request) {
+	ids := make([]string, len(h.store))
+	h.Lock()
+	i := 0
+	for id := range h.store {
+		ids[i] = id
+		i++
+	}
+	h.Unlock()
+
+	var target string
+	if len(ids) == 0 {
+		constructErrorResponse(writer, "No countries available to choose randomly", http.StatusNotFound)
+		return
+	} else if len(ids) == 1 {
+		target = ids[0]
+	} else {
+		rand.Seed(time.Now().UnixNano())
+		target = ids[rand.Intn(len(ids))]
+	}
+
+	//redirect
+	writer.Header().Add("location", fmt.Sprintf("/countries/%s", target))
+	writer.WriteHeader(http.StatusFound)
+}
+
 func (h *countriesHandler) getCountry(writer http.ResponseWriter, request *http.Request) {
 	parts := strings.Split(request.URL.String(), "/")
 	if len(parts) != 3 {
 		constructErrorResponse(writer, "Wrong number of parts on URL path", http.StatusNotFound)
+		return
+	}
+
+	if parts[2] == "random" {
+		h.getRandomCountry(writer, request)
 		return
 	}
 
