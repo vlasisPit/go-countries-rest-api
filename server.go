@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -74,7 +75,7 @@ func (h *countriesHandler) post(writer http.ResponseWriter, request *http.Reques
 	}
 
 	h.Lock()
-	h.store[country.Name] = country
+	h.store[strings.ToLower(country.Name)] = country
 	defer h.Unlock()
 }
 
@@ -104,12 +105,13 @@ Never have a nil map
 func newCountriesHandlers() *countriesHandler {
 	return &countriesHandler{
 		store: map[string]Country{
+/*		store: map[string]Country{
 			"greece": {
 				Name:       "Greece",
 				Alpha2Code: "GR",
 				Capital:    "Athens",
 				Currencies: []Currency{{Code: "EUR", Name: "Euro", Symbol: "E"}},
-			},
+			},*/
 		},
 	}
 }
