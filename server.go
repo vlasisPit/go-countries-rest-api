@@ -2,7 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net/http"
+	"sync"
 )
 
 type Country struct {
@@ -19,6 +22,7 @@ type Currency struct {
 }
 
 type countriesHandler struct {
+	sync.Mutex
 	store map[string]Country
 }
 
@@ -29,16 +33,18 @@ https://tour.golang.org/methods/4
 func (h *countriesHandler) get(writer http.ResponseWriter, request *http.Request) {
 	countries := make([]Country, len(h.store))
 
+	h.Lock()
 	i := 0
 	for _, country := range h.store {
 		countries[i] = country
 		i++
 	}
+	h.Unlock()
 
 	jsonBytes, err := json.Marshal(countries)
 	if err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
-		writer.Write([]byte(err.Error()))
+		constructErrorResponse(writer, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	writer.Header().Add("content-type", "application/json")
@@ -47,7 +53,34 @@ func (h *countriesHandler) get(writer http.ResponseWriter, request *http.Request
 }
 
 func (h *countriesHandler) post(writer http.ResponseWriter, request *http.Request) {
+	bodyBytes, err := ioutil.ReadAll(request.Body)
+	defer request.Body.Close()
+	if err != nil {
+		constructErrorResponse(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	ct := request.Header.Get("content-type")
+	if ct != "application/json" {
+		constructErrorResponse(writer, fmt.Sprintf("need content-type 'application/json', but got '%s'", ct), http.StatusUnsupportedMediaType)
+		return
+	}
+
+	var country Country
+	err = json.Unmarshal(bodyBytes, &country)
+	if err != nil {
+		constructErrorResponse(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	h.Lock()
+	h.store[country.Name] = country
+	defer h.Unlock()
+}
+
+func constructErrorResponse(writer http.ResponseWriter, errorMessage string, serverError int) {
+	writer.WriteHeader(serverError)
+	writer.Write([]byte(errorMessage))
 }
 
 func (h *countriesHandler) countries(writer http.ResponseWriter, request *http.Request) {
