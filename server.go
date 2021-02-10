@@ -53,6 +53,33 @@ func (h *countriesHandler) get(writer http.ResponseWriter, request *http.Request
 	writer.Write(jsonBytes)
 }
 
+func (h *countriesHandler) getCountry(writer http.ResponseWriter, request *http.Request) {
+	parts := strings.Split(request.URL.String(), "/")
+	if len(parts) != 3 {
+		constructErrorResponse(writer, "Wrong number of parts on URL path", http.StatusNotFound)
+		return
+	}
+
+	h.Lock()
+	country, ok := h.store[strings.ToLower(parts[2])]
+	if !ok {
+		constructErrorResponse(writer, "Country not found", http.StatusNotFound)
+		h.Unlock()
+		return
+	}
+	h.Unlock()
+
+	jsonBytes, err := json.Marshal(country)
+	if err != nil {
+		constructErrorResponse(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Header().Add("content-type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	writer.Write(jsonBytes)
+}
+
 func (h *countriesHandler) post(writer http.ResponseWriter, request *http.Request) {
 	bodyBytes, err := ioutil.ReadAll(request.Body)
 	defer request.Body.Close()
@@ -119,6 +146,7 @@ func newCountriesHandlers() *countriesHandler {
 func main() {
 	countriesHandler := newCountriesHandlers()
 	http.HandleFunc("/countries", countriesHandler.countries)
+	http.HandleFunc("/countries/", countriesHandler.getCountry)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		panic(err)
