@@ -37,10 +37,32 @@ func (h *countriesHandler) get(writer http.ResponseWriter, request *http.Request
 
 	jsonBytes, err := json.Marshal(countries)
 	if err != nil {
-		//TODO
+		writer.WriteHeader(http.StatusInternalServerError)
+		writer.Write([]byte(err.Error()))
 	}
 
+	writer.Header().Add("content-type", "application/json")
+	writer.WriteHeader(http.StatusOK)
 	writer.Write(jsonBytes)
+}
+
+func (h *countriesHandler) post(writer http.ResponseWriter, request *http.Request) {
+
+}
+
+func (h *countriesHandler) countries(writer http.ResponseWriter, request *http.Request) {
+	switch request.Method {
+	case "GET":
+		h.get(writer, request)
+		return
+	case "POST":
+		h.post(writer, request)
+		return
+	default:
+		writer.WriteHeader(http.StatusMethodNotAllowed)
+		writer.Write([]byte("method not allowed"))
+		return
+	}
 }
 
 /*
@@ -61,7 +83,7 @@ func newCountriesHandlers() *countriesHandler {
 
 func main() {
 	countriesHandler := newCountriesHandlers()
-	http.HandleFunc("/countries", countriesHandler.get)
+	http.HandleFunc("/countries", countriesHandler.countries)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		panic(err)
