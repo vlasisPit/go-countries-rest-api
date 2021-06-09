@@ -81,6 +81,10 @@ func (h *countriesHandler) getRandomCountry(writer http.ResponseWriter, request 
 	writer.WriteHeader(http.StatusFound)
 }
 
+/**
+Handle requests with path "/countries/{id}" like
+GET /countries/{id}
+ */
 func (h *countriesHandler) getCountry(writer http.ResponseWriter, request *http.Request) {
 	parts := strings.Split(request.URL.String(), "/")
 	if len(parts) != 3 {
@@ -139,11 +143,35 @@ func (h *countriesHandler) post(writer http.ResponseWriter, request *http.Reques
 	defer h.Unlock()
 }
 
+/**
+Handle (delete) requests with path "/countries/{id}" like
+DELETE /countries/{id}
+*/
+func (h *countriesHandler) deleteCountry(writer http.ResponseWriter, request *http.Request) {
+	parts := strings.Split(request.URL.String(), "/")
+	if len(parts) != 3 {
+		constructErrorResponse(writer, "Wrong number of parts on URL path", http.StatusNotFound)
+		return
+	}
+
+	h.Lock()
+	delete(h.store, strings.ToLower(parts[2]))
+	defer h.Unlock()
+
+	writer.Header().Add("content-type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+}
+
 func constructErrorResponse(writer http.ResponseWriter, errorMessage string, serverError int) {
 	writer.WriteHeader(serverError)
 	writer.Write([]byte(errorMessage))
 }
 
+/**
+Handle requests with path "/countries" like
+GET /countries
+POST /countries
+ */
 func (h *countriesHandler) countries(writer http.ResponseWriter, request *http.Request) {
 	switch request.Method {
 	case "GET":
@@ -151,6 +179,26 @@ func (h *countriesHandler) countries(writer http.ResponseWriter, request *http.R
 		return
 	case "POST":
 		h.post(writer, request)
+		return
+	default:
+		writer.WriteHeader(http.StatusMethodNotAllowed)
+		writer.Write([]byte("method not allowed"))
+		return
+	}
+}
+
+/**
+Handle requests with path "/countries" like
+GET /countries
+POST /countries
+*/
+func (h *countriesHandler) countryById(writer http.ResponseWriter, request *http.Request) {
+	switch request.Method {
+	case "GET":
+		h.getCountry(writer, request)
+		return
+	case "DELETE":
+		h.deleteCountry(writer, request)
 		return
 	default:
 		writer.WriteHeader(http.StatusMethodNotAllowed)
@@ -176,12 +224,33 @@ func newCountriesHandlers() *countriesHandler {
 	}
 }
 
-func main() {
-	countriesHandler := newCountriesHandlers()
-	http.HandleFunc("/countries", countriesHandler.countries)
-	http.HandleFunc("/countries/", countriesHandler.getCountry)
-	err := http.ListenAndServe(":8080", nil)
+/**
+According to https://www.alexedwards.net/blog/a-recap-of-request-handling
+you should not use "http.HandleFunc" because of a security vulnerability issue.
+Use "mux := http.NewServeMux()" instead
+So as a rule of thumb it's a good idea to avoid the DefaultServeMux, and instead
+use your own locally-scoped ServeMux, like we have been so far.
+Check section "The DefaultServeMux" on article.
+*/
+func initialize(port string, mux *http.ServeMux, countriesHandler *countriesHandler) {
+	mux.HandleFunc("/countries", countriesHandler.countries)
+	mux.HandleFunc("/countries/", countriesHandler.countryById)
+	err := http.ListenAndServe(port, mux)
 	if err != nil {
 		panic(err)
 	}
+}
+
+/**
+https://dev.to/bmf_san/introduction-to-url-router-from-scratch-with-golang-3p8j
+https://github.com/gsingharoy/httprouter-tutorial/tree/master/part4
+Check this about routing
+*/
+type App struct {
+}
+
+func (a *App) Run(port string) {
+	mux := http.NewServeMux()
+	countriesHandler := newCountriesHandlers()
+	initialize(port, mux, countriesHandler)
 }
