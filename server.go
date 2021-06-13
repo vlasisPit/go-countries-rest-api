@@ -9,24 +9,13 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	model "go-countries-rest-api/api/models"
 )
-
-type Country struct {
-	Name       string     `json:"name"`
-	Alpha2Code string     `json:"alpha2Code"`
-	Capital    string     `json:"capital"`
-	Currencies []Currency `json:"currencies"`
-}
-
-type Currency struct {
-	Code   string `json:"code"`
-	Name   string `json:"name"`
-	Symbol string `json:"symbol"`
-}
 
 type countriesHandler struct {
 	sync.Mutex
-	store map[string]Country
+	store map[string]model.Country
 }
 
 /*
@@ -34,7 +23,7 @@ Method pointer receiver to countriesHandler
 https://tour.golang.org/methods/4
 */
 func (h *countriesHandler) get(writer http.ResponseWriter, request *http.Request) {
-	countries := make([]Country, len(h.store))
+	countries := make([]model.Country, len(h.store))
 
 	h.Lock()
 	i := 0
@@ -131,7 +120,7 @@ func (h *countriesHandler) post(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 
-	var country Country
+	var country model.Country
 	err = json.Unmarshal(bodyBytes, &country)
 	if err != nil {
 		constructErrorResponse(writer, err.Error(), http.StatusBadRequest)
@@ -212,7 +201,7 @@ Never have a nil map
 */
 func newCountriesHandlers() *countriesHandler {
 	return &countriesHandler{
-		store: map[string]Country{
+		store: map[string]model.Country{
 /*		store: map[string]Country{
 			"greece": {
 				Name:       "Greece",

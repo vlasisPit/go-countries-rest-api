@@ -11,6 +11,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	model "go-countries-rest-api/api/models"
 )
 
 func TestGetAllCountriesWithEmptyMemory(t *testing.T) {
@@ -141,14 +143,14 @@ func TestAddTwoCountriesAndDeleteSpecificCountry(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, getSpainReqRecorder.Code)
 }
 
-func constructCountryFromJson(jsonData string) *Country {
-	country := &Country{}
+func constructCountryFromJson(jsonData string) *model.Country {
+	country := &model.Country{}
 	json.Unmarshal([]byte(jsonData), country)
 	return country
 }
 
-func constructCountriesFromJson(jsonData string) *[]Country {
-	countries := &[]Country{}
+func constructCountriesFromJson(jsonData string) *[]model.Country {
+	countries := &[]model.Country{}
 	json.Unmarshal([]byte(jsonData), countries)
 	return countries
 }

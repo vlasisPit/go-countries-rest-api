@@ -1,0 +1,12 @@
+{
+  "name": "Greece",
+  "alpha2Code": "GR",
+  "capital": "Athens",
+  "currencies": [
+    {
+      "code": "EUR",
+      "name": "Euro",
+      "symbol": "E"
+    }
+  ]
+}
