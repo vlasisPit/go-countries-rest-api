@@ -3,35 +3,19 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	storage "go-countries-rest-api/api/controllers"
+	model "go-countries-rest-api/api/models"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"strings"
-	"sync"
-	"time"
-
-	model "go-countries-rest-api/api/models"
 )
-
-type countriesHandler struct {
-	sync.Mutex
-	store map[string]model.Country
-}
 
 /*
 Method pointer receiver to countriesHandler
 https://tour.golang.org/methods/4
 */
-func (h *countriesHandler) get(writer http.ResponseWriter, request *http.Request) {
-	countries := make([]model.Country, len(h.store))
-
-	h.Lock()
-	i := 0
-	for _, country := range h.store {
-		countries[i] = country
-		i++
-	}
-	h.Unlock()
+func (s *Server) get(writer http.ResponseWriter, request *http.Request) {
+	countries, _ := s.actions.GetAllCountries()
 
 	jsonBytes, err := json.Marshal(countries)
 	if err != nil {
@@ -44,29 +28,15 @@ func (h *countriesHandler) get(writer http.ResponseWriter, request *http.Request
 	writer.Write(jsonBytes)
 }
 
-func (h *countriesHandler) getRandomCountry(writer http.ResponseWriter, request *http.Request) {
-	ids := make([]string, len(h.store))
-	h.Lock()
-	i := 0
-	for id := range h.store {
-		ids[i] = id
-		i++
-	}
-	h.Unlock()
-
-	var target string
-	if len(ids) == 0 {
+func (s *Server) getRandomCountry(writer http.ResponseWriter, request *http.Request) {
+	target, err := s.actions.GetRandomCountryId()
+	if err!=nil {
 		constructErrorResponse(writer, "No countries available to choose randomly", http.StatusNotFound)
 		return
-	} else if len(ids) == 1 {
-		target = ids[0]
-	} else {
-		rand.Seed(time.Now().UnixNano())
-		target = ids[rand.Intn(len(ids))]
 	}
 
 	//redirect
-	writer.Header().Add("location", fmt.Sprintf("/countries/%s", target))
+	writer.Header().Add("location", fmt.Sprintf("/countries/%s", *target))
 	writer.WriteHeader(http.StatusFound)
 }
 
@@ -74,7 +44,7 @@ func (h *countriesHandler) getRandomCountry(writer http.ResponseWriter, request 
 Handle requests with path "/countries/{id}" like
 GET /countries/{id}
  */
-func (h *countriesHandler) getCountry(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) getCountry(writer http.ResponseWriter, request *http.Request) {
 	parts := strings.Split(request.URL.String(), "/")
 	if len(parts) != 3 {
 		constructErrorResponse(writer, "Wrong number of parts on URL path", http.StatusNotFound)
@@ -82,18 +52,15 @@ func (h *countriesHandler) getCountry(writer http.ResponseWriter, request *http.
 	}
 
 	if parts[2] == "random" {
-		h.getRandomCountry(writer, request)
+		s.actions.GetRandomCountryId()
 		return
 	}
 
-	h.Lock()
-	country, ok := h.store[strings.ToLower(parts[2])]
-	if !ok {
+	country, notFoundError := s.actions.GetCountryById(parts[2])
+	if notFoundError!=nil {
 		constructErrorResponse(writer, "Country not found", http.StatusNotFound)
-		h.Unlock()
 		return
 	}
-	h.Unlock()
 
 	jsonBytes, err := json.Marshal(country)
 	if err != nil {
@@ -106,7 +73,7 @@ func (h *countriesHandler) getCountry(writer http.ResponseWriter, request *http.
 	writer.Write(jsonBytes)
 }
 
-func (h *countriesHandler) post(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) post(writer http.ResponseWriter, request *http.Request) {
 	bodyBytes, err := ioutil.ReadAll(request.Body)
 	defer request.Body.Close()
 	if err != nil {
@@ -127,25 +94,21 @@ func (h *countriesHandler) post(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 
-	h.Lock()
-	h.store[strings.ToLower(country.Name)] = country
-	defer h.Unlock()
+	s.actions.AddCountry(country)
 }
 
 /**
 Handle (delete) requests with path "/countries/{id}" like
 DELETE /countries/{id}
 */
-func (h *countriesHandler) deleteCountry(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) deleteCountry(writer http.ResponseWriter, request *http.Request) {
 	parts := strings.Split(request.URL.String(), "/")
 	if len(parts) != 3 {
 		constructErrorResponse(writer, "Wrong number of parts on URL path", http.StatusNotFound)
 		return
 	}
 
-	h.Lock()
-	delete(h.store, strings.ToLower(parts[2]))
-	defer h.Unlock()
+	s.actions.DeleteCountry(parts[2])
 
 	writer.Header().Add("content-type", "application/json")
 	writer.WriteHeader(http.StatusOK)
@@ -161,13 +124,13 @@ Handle requests with path "/countries" like
 GET /countries
 POST /countries
  */
-func (h *countriesHandler) countries(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) countries(writer http.ResponseWriter, request *http.Request) {
 	switch request.Method {
 	case "GET":
-		h.get(writer, request)
+		s.get(writer, request)
 		return
 	case "POST":
-		h.post(writer, request)
+		s.post(writer, request)
 		return
 	default:
 		writer.WriteHeader(http.StatusMethodNotAllowed)
@@ -181,35 +144,18 @@ Handle requests with path "/countries" like
 GET /countries
 POST /countries
 */
-func (h *countriesHandler) countryById(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) countryById(writer http.ResponseWriter, request *http.Request) {
 	switch request.Method {
 	case "GET":
-		h.getCountry(writer, request)
+		s.getCountry(writer, request)
 		return
 	case "DELETE":
-		h.deleteCountry(writer, request)
+		s.deleteCountry(writer, request)
 		return
 	default:
 		writer.WriteHeader(http.StatusMethodNotAllowed)
 		writer.Write([]byte("method not allowed"))
 		return
-	}
-}
-
-/*
-Never have a nil map
-*/
-func newCountriesHandlers() *countriesHandler {
-	return &countriesHandler{
-		store: map[string]model.Country{
-/*		store: map[string]Country{
-			"greece": {
-				Name:       "Greece",
-				Alpha2Code: "GR",
-				Capital:    "Athens",
-				Currencies: []Currency{{Code: "EUR", Name: "Euro", Symbol: "E"}},
-			},*/
-		},
 	}
 }
 
@@ -221,13 +167,18 @@ So as a rule of thumb it's a good idea to avoid the DefaultServeMux, and instead
 use your own locally-scoped ServeMux, like we have been so far.
 Check section "The DefaultServeMux" on article.
 */
-func initialize(port string, mux *http.ServeMux, countriesHandler *countriesHandler) {
-	mux.HandleFunc("/countries", countriesHandler.countries)
-	mux.HandleFunc("/countries/", countriesHandler.countryById)
-	err := http.ListenAndServe(port, mux)
+func (s *Server) initialize(port string) {
+	s.mux.HandleFunc("/countries", s.countries)
+	s.mux.HandleFunc("/countries/", s.countryById)
+	err := http.ListenAndServe(port, s.mux)
 	if err != nil {
 		panic(err)
 	}
+}
+
+type Server struct {
+	mux *http.ServeMux
+	actions storage.Actions
 }
 
 /**
@@ -236,10 +187,15 @@ https://github.com/gsingharoy/httprouter-tutorial/tree/master/part4
 Check this about routing
 */
 type App struct {
+	port string
 }
 
-func (a *App) Run(port string) {
+func (a *App) Run() {
 	mux := http.NewServeMux()
-	countriesHandler := newCountriesHandlers()
-	initialize(port, mux, countriesHandler)
+	countriesStorage := storage.NewCountriesStorage()
+	server := Server{
+		mux:     mux,
+		actions: countriesStorage,
+	}
+	server.initialize(a.port)
 }
