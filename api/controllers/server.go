@@ -1,10 +1,10 @@
-package main
+package controllers
 
 import (
 	"encoding/json"
 	"fmt"
-	storage "go-countries-rest-api/api/controllers"
 	model "go-countries-rest-api/api/models"
+	utils "go-countries-rest-api/api/utils"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -19,7 +19,7 @@ func (s *Server) get(writer http.ResponseWriter, request *http.Request) {
 
 	jsonBytes, err := json.Marshal(countries)
 	if err != nil {
-		constructErrorResponse(writer, err.Error(), http.StatusInternalServerError)
+		utils.ConstructErrorResponse(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -31,7 +31,7 @@ func (s *Server) get(writer http.ResponseWriter, request *http.Request) {
 func (s *Server) getRandomCountry(writer http.ResponseWriter, request *http.Request) {
 	target, err := s.actions.GetRandomCountryId()
 	if err!=nil {
-		constructErrorResponse(writer, "No countries available to choose randomly", http.StatusNotFound)
+		utils.ConstructErrorResponse(writer, "No countries available to choose randomly", http.StatusNotFound)
 		return
 	}
 
@@ -47,7 +47,7 @@ GET /countries/{id}
 func (s *Server) getCountry(writer http.ResponseWriter, request *http.Request) {
 	parts := strings.Split(request.URL.String(), "/")
 	if len(parts) != 3 {
-		constructErrorResponse(writer, "Wrong number of parts on URL path", http.StatusNotFound)
+		utils.ConstructErrorResponse(writer, "Wrong number of parts on URL path", http.StatusNotFound)
 		return
 	}
 
@@ -58,13 +58,13 @@ func (s *Server) getCountry(writer http.ResponseWriter, request *http.Request) {
 
 	country, notFoundError := s.actions.GetCountryById(parts[2])
 	if notFoundError!=nil {
-		constructErrorResponse(writer, "Country not found", http.StatusNotFound)
+		utils.ConstructErrorResponse(writer, "Country not found", http.StatusNotFound)
 		return
 	}
 
 	jsonBytes, err := json.Marshal(country)
 	if err != nil {
-		constructErrorResponse(writer, err.Error(), http.StatusInternalServerError)
+		utils.ConstructErrorResponse(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -77,20 +77,20 @@ func (s *Server) post(writer http.ResponseWriter, request *http.Request) {
 	bodyBytes, err := ioutil.ReadAll(request.Body)
 	defer request.Body.Close()
 	if err != nil {
-		constructErrorResponse(writer, err.Error(), http.StatusInternalServerError)
+		utils.ConstructErrorResponse(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	ct := request.Header.Get("content-type")
 	if ct != "application/json" {
-		constructErrorResponse(writer, fmt.Sprintf("need content-type 'application/json', but got '%s'", ct), http.StatusUnsupportedMediaType)
+		utils.ConstructErrorResponse(writer, fmt.Sprintf("need content-type 'application/json', but got '%s'", ct), http.StatusUnsupportedMediaType)
 		return
 	}
 
 	var country model.Country
 	err = json.Unmarshal(bodyBytes, &country)
 	if err != nil {
-		constructErrorResponse(writer, err.Error(), http.StatusBadRequest)
+		utils.ConstructErrorResponse(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -104,7 +104,7 @@ DELETE /countries/{id}
 func (s *Server) deleteCountry(writer http.ResponseWriter, request *http.Request) {
 	parts := strings.Split(request.URL.String(), "/")
 	if len(parts) != 3 {
-		constructErrorResponse(writer, "Wrong number of parts on URL path", http.StatusNotFound)
+		utils.ConstructErrorResponse(writer, "Wrong number of parts on URL path", http.StatusNotFound)
 		return
 	}
 
@@ -112,11 +112,6 @@ func (s *Server) deleteCountry(writer http.ResponseWriter, request *http.Request
 
 	writer.Header().Add("content-type", "application/json")
 	writer.WriteHeader(http.StatusOK)
-}
-
-func constructErrorResponse(writer http.ResponseWriter, errorMessage string, serverError int) {
-	writer.WriteHeader(serverError)
-	writer.Write([]byte(errorMessage))
 }
 
 /**
@@ -133,8 +128,7 @@ func (s *Server) countries(writer http.ResponseWriter, request *http.Request) {
 		s.post(writer, request)
 		return
 	default:
-		writer.WriteHeader(http.StatusMethodNotAllowed)
-		writer.Write([]byte("method not allowed"))
+		utils.ConstructErrorResponse(writer, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 }
@@ -153,8 +147,7 @@ func (s *Server) countryById(writer http.ResponseWriter, request *http.Request) 
 		s.deleteCountry(writer, request)
 		return
 	default:
-		writer.WriteHeader(http.StatusMethodNotAllowed)
-		writer.Write([]byte("method not allowed"))
+		utils.ConstructErrorResponse(writer, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 }
@@ -168,8 +161,7 @@ use your own locally-scoped ServeMux, like we have been so far.
 Check section "The DefaultServeMux" on article.
 */
 func (s *Server) initialize(port string) {
-	s.mux.HandleFunc("/countries", s.countries)
-	s.mux.HandleFunc("/countries/", s.countryById)
+	s.initializeRoutes()
 	err := http.ListenAndServe(port, s.mux)
 	if err != nil {
 		panic(err)
@@ -178,7 +170,7 @@ func (s *Server) initialize(port string) {
 
 type Server struct {
 	mux *http.ServeMux
-	actions storage.Actions
+	actions Actions
 }
 
 /**
@@ -192,7 +184,7 @@ type App struct {
 
 func (a *App) Run() {
 	mux := http.NewServeMux()
-	countriesStorage := storage.NewCountriesStorage()
+	countriesStorage := NewCountriesStorage()
 	server := Server{
 		mux:     mux,
 		actions: countriesStorage,

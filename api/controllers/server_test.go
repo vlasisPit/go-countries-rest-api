@@ -1,4 +1,4 @@
-package main
+package controllers
 
 /**
 For each, `newCountriesHandlers` is called. So a new empty internal storage is created
@@ -7,7 +7,6 @@ For each, `newCountriesHandlers` is called. So a new empty internal storage is c
 import (
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
-	storage "go-countries-rest-api/api/controllers"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -144,6 +143,14 @@ func TestAddTwoCountriesAndDeleteSpecificCountry(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, getSpainReqRecorder.Code)
 }
 
+func TestPatchVerbIsNotSupported(t *testing.T) {
+	mux := initializeHandlers()
+	getAllReq, _ := http.NewRequest("PATCH", "/countries/greece", nil)
+	getAllReqRecorder := newRequestRecorder(getAllReq, mux)
+	assert.Equal(t, http.StatusMethodNotAllowed, getAllReqRecorder.Code)
+	assert.Equal(t, "method not allowed", getAllReqRecorder.Body.String())
+}
+
 func constructCountryFromJson(jsonData string) *model.Country {
 	country := &model.Country{}
 	json.Unmarshal([]byte(jsonData), country)
@@ -168,7 +175,7 @@ func newRequestRecorder(req *http.Request, mux *http.ServeMux) *httptest.Respons
 
 func initializeHandlers() *http.ServeMux {
 	mux := http.NewServeMux()
-	countriesStorage := storage.NewCountriesStorage()
+	countriesStorage := NewCountriesStorage()
 	server := Server{
 		mux:     mux,
 		actions: countriesStorage,
