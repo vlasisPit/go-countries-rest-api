@@ -1,4 +1,4 @@
-package controllers
+package store
 
 import "go-countries-rest-api/api/models"
 

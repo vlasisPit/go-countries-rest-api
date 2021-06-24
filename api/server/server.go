@@ -1,8 +1,9 @@
-package controllers
+package server
 
 import (
 	"encoding/json"
 	"fmt"
+	"go-countries-rest-api/api/store"
 	model "go-countries-rest-api/api/models"
 	utils "go-countries-rest-api/api/utils"
 	"io/ioutil"
@@ -10,12 +11,33 @@ import (
 	"strings"
 )
 
+/**
+According to https://www.alexedwards.net/blog/a-recap-of-request-handling
+you should not use "http.HandleFunc" because of a security vulnerability issue.
+Use "mux := http.NewServeMux()" instead
+So as a rule of thumb it's a good idea to avoid the DefaultServeMux, and instead
+use your own locally-scoped ServeMux, like we have been so far.
+Check section "The DefaultServeMux" on article.
+*/
+func (s *Server) Initialize(port string) {
+	s.initializeRoutes()
+	err := http.ListenAndServe(port, s.Mux)
+	if err != nil {
+		panic(err)
+	}
+}
+
+type Server struct {
+	Mux     *http.ServeMux
+	Actions store.Actions
+}
+
 /*
 Method pointer receiver to countriesHandler
 https://tour.golang.org/methods/4
 */
 func (s *Server) get(writer http.ResponseWriter, request *http.Request) {
-	countries, _ := s.actions.GetAllCountries()
+	countries, _ := s.Actions.GetAllCountries()
 
 	jsonBytes, err := json.Marshal(countries)
 	if err != nil {
@@ -29,7 +51,7 @@ func (s *Server) get(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (s *Server) getRandomCountry(writer http.ResponseWriter, request *http.Request) {
-	target, err := s.actions.GetRandomCountryId()
+	target, err := s.Actions.GetRandomCountryId()
 	if err!=nil {
 		utils.ConstructErrorResponse(writer, "No countries available to choose randomly", http.StatusNotFound)
 		return
@@ -52,11 +74,11 @@ func (s *Server) getCountry(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if parts[2] == "random" {
-		s.actions.GetRandomCountryId()
+		s.Actions.GetRandomCountryId()
 		return
 	}
 
-	country, notFoundError := s.actions.GetCountryById(parts[2])
+	country, notFoundError := s.Actions.GetCountryById(parts[2])
 	if notFoundError!=nil {
 		utils.ConstructErrorResponse(writer, "Country not found", http.StatusNotFound)
 		return
@@ -94,7 +116,7 @@ func (s *Server) post(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	s.actions.AddCountry(country)
+	s.Actions.AddCountry(country)
 }
 
 /**
@@ -108,7 +130,7 @@ func (s *Server) deleteCountry(writer http.ResponseWriter, request *http.Request
 		return
 	}
 
-	s.actions.DeleteCountry(parts[2])
+	s.Actions.DeleteCountry(parts[2])
 
 	writer.Header().Add("content-type", "application/json")
 	writer.WriteHeader(http.StatusOK)
@@ -150,44 +172,4 @@ func (s *Server) countryById(writer http.ResponseWriter, request *http.Request) 
 		utils.ConstructErrorResponse(writer, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-}
-
-/**
-According to https://www.alexedwards.net/blog/a-recap-of-request-handling
-you should not use "http.HandleFunc" because of a security vulnerability issue.
-Use "mux := http.NewServeMux()" instead
-So as a rule of thumb it's a good idea to avoid the DefaultServeMux, and instead
-use your own locally-scoped ServeMux, like we have been so far.
-Check section "The DefaultServeMux" on article.
-*/
-func (s *Server) initialize(port string) {
-	s.initializeRoutes()
-	err := http.ListenAndServe(port, s.mux)
-	if err != nil {
-		panic(err)
-	}
-}
-
-type Server struct {
-	mux *http.ServeMux
-	actions Actions
-}
-
-/**
-https://dev.to/bmf_san/introduction-to-url-router-from-scratch-with-golang-3p8j
-https://github.com/gsingharoy/httprouter-tutorial/tree/master/part4
-Check this about routing
-*/
-type App struct {
-	Port string
-}
-
-func (a *App) Run() {
-	mux := http.NewServeMux()
-	countriesStorage := NewCountriesStorage()
-	server := Server{
-		mux:     mux,
-		actions: countriesStorage,
-	}
-	server.initialize(a.Port)
 }

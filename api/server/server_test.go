@@ -1,4 +1,4 @@
-package controllers
+package server
 
 /**
 For each, `newCountriesHandlers` is called. So a new empty internal storage is created
@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/stretchr/testify/assert"
+	"go-countries-rest-api/api/store"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -190,10 +191,10 @@ func newRequestRecorder(req *http.Request, mux *http.ServeMux) *httptest.Respons
 
 func initializeHandlers() *http.ServeMux {
 	mux := http.NewServeMux()
-	countriesStorage := NewCountriesStorage()
+	countriesStorage := store.NewCountriesStorage()
 	server := Server{
-		mux:     mux,
-		actions: countriesStorage,
+		Mux:     mux,
+		Actions: countriesStorage,
 	}
 	mux.HandleFunc("/countries", server.countries)
 	mux.HandleFunc("/countries/", server.countryById)
