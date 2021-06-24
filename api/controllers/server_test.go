@@ -6,6 +6,7 @@ For each, `newCountriesHandlers` is called. So a new empty internal storage is c
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -65,17 +66,22 @@ func TestAddTwoCountriesAndGetAllCountries(t *testing.T) {
 	getAllReq, _ := http.NewRequest("GET", "/countries", nil)
 	getAllReqRecorder := newRequestRecorder(getAllReq, mux)
 	actualCountries := constructCountriesFromJson(getAllReqRecorder.Body.String())
+	greeceIndex, errGreeceIndex := getIndexForCountry(actualCountries, "Greece")
+	spainIndex, errSpainIndex := getIndexForCountry(actualCountries, "Spain")
+
 	assert.Equal(t, http.StatusOK, getAllReqRecorder.Code)
 	assert.Equal(t, 2, len(*actualCountries))
-	assert.Equal(t, "Greece", (*actualCountries)[0].Name)
-	assert.Equal(t, "GR", (*actualCountries)[0].Alpha2Code)
-	assert.Equal(t, "Athens", (*actualCountries)[0].Capital)
-	assert.Equal(t, "Euro", (*actualCountries)[0].Currencies[0].Name)
-	assert.Equal(t, "EUR", (*actualCountries)[0].Currencies[0].Code)
-	assert.Equal(t, "Spain", (*actualCountries)[1].Name)
-	assert.Equal(t, "ES", (*actualCountries)[1].Alpha2Code)
-	assert.Equal(t, "Madrid", (*actualCountries)[1].Capital)
-	assert.Equal(t, "Euro", (*actualCountries)[1].Currencies[0].Name)
+	assert.Equal(t, nil, errGreeceIndex)
+	assert.Equal(t, nil, errSpainIndex)
+	assert.Equal(t, "Greece", (*actualCountries)[greeceIndex].Name)
+	assert.Equal(t, "GR", (*actualCountries)[greeceIndex].Alpha2Code)
+	assert.Equal(t, "Athens", (*actualCountries)[greeceIndex].Capital)
+	assert.Equal(t, "Euro", (*actualCountries)[greeceIndex].Currencies[0].Name)
+	assert.Equal(t, "EUR", (*actualCountries)[greeceIndex].Currencies[0].Code)
+	assert.Equal(t, "Spain", (*actualCountries)[spainIndex].Name)
+	assert.Equal(t, "ES", (*actualCountries)[spainIndex].Alpha2Code)
+	assert.Equal(t, "Madrid", (*actualCountries)[spainIndex].Capital)
+	assert.Equal(t, "Euro", (*actualCountries)[spainIndex].Currencies[0].Name)
 }
 
 func TestAddTwoCountriesAndGetSpecificCountry(t *testing.T) {
@@ -161,6 +167,15 @@ func constructCountriesFromJson(jsonData string) *[]model.Country {
 	countries := &[]model.Country{}
 	json.Unmarshal([]byte(jsonData), countries)
 	return countries
+}
+
+func getIndexForCountry(countries *[]model.Country, countryName string) (int, error) {
+	for i := 0; i < len(*countries); i++ {
+		if (*countries)[i].Name == countryName {
+			return i,nil
+		}
+	}
+	return -1,errors.New("Index not found.")
 }
 
 // Mocks a handler and returns a httptest.ResponseRecorder
