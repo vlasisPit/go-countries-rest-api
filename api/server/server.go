@@ -179,7 +179,7 @@ https://github.com/gsingharoy/httprouter-tutorial/tree/master/part4
 Check this about routing
 */
 type App struct {
-	port string
+	Port string
 }
 
 func (a *App) Run() {
@@ -189,5 +189,5 @@ func (a *App) Run() {
 		mux:     mux,
 		actions: countriesStorage,
 	}
-	server.initialize(a.port)
+	server.initialize(a.Port)
 }
