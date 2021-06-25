@@ -18,8 +18,8 @@ func TestStorageAddOneCountryAndGetAllCountries(t *testing.T) {
 	country := constructCountryGreece()
 	_, addCountryError := storage.AddCountry(country)
 	actualCountries, getAllCountriesError := storage.GetAllCountries()
-	assert.Equal(t, nil, addCountryError)
-	assert.Equal(t, nil, getAllCountriesError)
+	assert.Nil(t, addCountryError)
+	assert.Nil(t, getAllCountriesError)
 	assert.Equal(t, 1, len(*actualCountries))
 	assert.Equal(t, "Greece", (*actualCountries)[0].Name)
 	assert.Equal(t, "GR", (*actualCountries)[0].Alpha2Code)
@@ -35,9 +35,9 @@ func TestStorageAddTwoCountriesAndGetAllCountries(t *testing.T) {
 	_, addGreeceCountryError := storage.AddCountry(greece)
 	_, addSpainCountryError := storage.AddCountry(spain)
 	actualCountries, getAllCountriesError := storage.GetAllCountries()
-	assert.Equal(t, nil, addGreeceCountryError)
-	assert.Equal(t, nil, addSpainCountryError)
-	assert.Equal(t, nil, getAllCountriesError)
+	assert.Nil(t, addGreeceCountryError)
+	assert.Nil(t, addSpainCountryError)
+	assert.Nil(t, getAllCountriesError)
 	assert.Equal(t, 2, len(*actualCountries))
 }
 
@@ -48,9 +48,9 @@ func TestStorageAddTwoCountriesAndGetSpecificCountry(t *testing.T) {
 	_, addGreeceCountryError := storage.AddCountry(greece)
 	_, addSpainCountryError := storage.AddCountry(spain)
 	actualCountries, getAllCountriesError := storage.GetAllCountries()
-	assert.Equal(t, nil, addGreeceCountryError)
-	assert.Equal(t, nil, addSpainCountryError)
-	assert.Equal(t, nil, getAllCountriesError)
+	assert.Nil(t, addGreeceCountryError)
+	assert.Nil(t, addSpainCountryError)
+	assert.Nil(t, getAllCountriesError)
 	assert.Equal(t, 2, len(*actualCountries))
 
 	actual, addGreeceCountryError := storage.GetCountryById("greece")
@@ -68,16 +68,16 @@ func TestStorageAddTwoCountriesAndDeleteSpecificCountry(t *testing.T) {
 	_, addGreeceCountryError := storage.AddCountry(greece)
 	_, addSpainCountryError := storage.AddCountry(spain)
 	actualCountries, getAllCountriesError := storage.GetAllCountries()
-	assert.Equal(t, nil, addGreeceCountryError)
-	assert.Equal(t, nil, addSpainCountryError)
-	assert.Equal(t, nil, getAllCountriesError)
+	assert.Nil(t, addGreeceCountryError)
+	assert.Nil(t, addSpainCountryError)
+	assert.Nil(t, getAllCountriesError)
 	assert.Equal(t, 2, len(*actualCountries))
 
 	deleteSpainCountryError := storage.DeleteCountry("spain")
-	assert.Equal(t, nil, deleteSpainCountryError)
+	assert.Nil(t, deleteSpainCountryError)
 
 	actualCountriesAfterDeletion, getAllCountriesErrorAfterDeletion := storage.GetAllCountries()
-	assert.Equal(t, nil, getAllCountriesErrorAfterDeletion)
+	assert.Nil(t, getAllCountriesErrorAfterDeletion)
 	assert.Equal(t, 1, len(*actualCountriesAfterDeletion))
 
 	actual, addGreeceCountryError := storage.GetCountryById("greece")
@@ -95,13 +95,13 @@ func TestStorageAddTwoCountriesAndGetRandomCountry(t *testing.T) {
 	_, addGreeceCountryError := storage.AddCountry(greece)
 	_, addSpainCountryError := storage.AddCountry(spain)
 	actualCountries, getAllCountriesError := storage.GetAllCountries()
-	assert.Equal(t, nil, addGreeceCountryError)
-	assert.Equal(t, nil, addSpainCountryError)
-	assert.Equal(t, nil, getAllCountriesError)
+	assert.Nil(t, addGreeceCountryError)
+	assert.Nil(t, addSpainCountryError)
+	assert.Nil(t, getAllCountriesError)
 	assert.Equal(t, 2, len(*actualCountries))
 
 	actual, randomCountryError := storage.GetRandomCountryId()
-	assert.Equal(t, nil, randomCountryError)
+	assert.Nil(t, randomCountryError)
 	assert.Contains(t, [2]string{"greece", "spain"}, *actual)
 }
 
@@ -110,19 +110,19 @@ func TestStorageAddOneCountriesAndGetRandomCountry(t *testing.T) {
 	greece := constructCountryGreece()
 	_, addGreeceCountryError := storage.AddCountry(greece)
 	actualCountries, getAllCountriesError := storage.GetAllCountries()
-	assert.Equal(t, nil, addGreeceCountryError)
-	assert.Equal(t, nil, getAllCountriesError)
+	assert.Nil(t, addGreeceCountryError)
+	assert.Nil(t, getAllCountriesError)
 	assert.Equal(t, 1, len(*actualCountries))
 
 	actual, randomCountryError := storage.GetRandomCountryId()
-	assert.Equal(t, nil, randomCountryError)
+	assert.Nil(t, randomCountryError)
 	assert.Equal(t, "greece", *actual)
 }
 
 func TestStorageNoCountryAddedAndGetRandomCountry(t *testing.T) {
 	storage := NewCountriesStorage()
 	actualCountries, getAllCountriesError := storage.GetAllCountries()
-	assert.Equal(t, nil, getAllCountriesError)
+	assert.Nil(t, getAllCountriesError)
 	assert.Equal(t, 0, len(*actualCountries))
 
 	actual, randomCountryError := storage.GetRandomCountryId()

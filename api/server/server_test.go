@@ -150,12 +150,58 @@ func TestAddTwoCountriesAndDeleteSpecificCountry(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, getSpainReqRecorder.Code)
 }
 
-func TestPatchVerbIsNotSupported(t *testing.T) {
+func TestPatchVerbIsNotSupportedForCountryByIdPath(t *testing.T) {
 	mux := initializeHandlers()
 	getAllReq, _ := http.NewRequest("PATCH", "/countries/greece", nil)
 	getAllReqRecorder := newRequestRecorder(getAllReq, mux)
 	assert.Equal(t, http.StatusMethodNotAllowed, getAllReqRecorder.Code)
 	assert.Equal(t, "method not allowed", getAllReqRecorder.Body.String())
+}
+
+func TestPatchVerbIsNotSupportedForCountriesPath(t *testing.T) {
+	mux := initializeHandlers()
+	getAllReq, _ := http.NewRequest("PATCH", "/countries", nil)
+	getAllReqRecorder := newRequestRecorder(getAllReq, mux)
+	assert.Equal(t, http.StatusMethodNotAllowed, getAllReqRecorder.Code)
+	assert.Equal(t, "method not allowed", getAllReqRecorder.Body.String())
+}
+
+func TestAddTwoCountriesAndGetRandomCountry(t *testing.T) {
+	mux := initializeHandlers()
+
+	bodyGr := "{\"name\": \"Greece\",\"alpha2Code\": \"GR\",\"capital\": \"Athens\",\"currencies\": [{\"code\": \"EUR\",\"name\": \"Euro\",\"symbol\": \"E\"}]}"
+	addReqGr, _ := http.NewRequest("POST", "/countries", strings.NewReader(bodyGr))
+	addReqGr.Header.Add("Content-Type", "application/json")
+	addReqRecorderGr := newRequestRecorder(addReqGr, mux)
+	assert.Equal(t, http.StatusOK, addReqRecorderGr.Code)
+	assert.Equal(t, "", addReqRecorderGr.Body.String())
+
+	bodySp := "{\"name\": \"Spain\",\"alpha2Code\": \"ES\",\"capital\": \"Madrid\",\"currencies\": [{\"code\": \"EUR\",\"name\": \"Euro\",\"symbol\": \"E\"}]}"
+	addReqSp, _ := http.NewRequest("POST", "/countries", strings.NewReader(bodySp))
+	addReqSp.Header.Add("Content-Type", "application/json")
+	addReqRecorderSp := newRequestRecorder(addReqSp, mux)
+	assert.Equal(t, http.StatusOK, addReqRecorderSp.Code)
+	assert.Equal(t, "", addReqRecorderSp.Body.String())
+
+	getRandomReq, _ := http.NewRequest("GET", "/countries/random", nil)
+	getRandomReqRecorder := newRequestRecorder(getRandomReq, mux)
+
+	assert.Equal(t, http.StatusFound, getRandomReqRecorder.Code)
+	assert.Contains(t, [2]string{"/countries/greece", "/countries/spain"}, getRandomReqRecorder.Header().Get("location"))
+}
+
+func TestNoCountryAddedAndGetRandomCountry(t *testing.T) {
+	mux := initializeHandlers()
+	getAllReq, _ := http.NewRequest("GET", "/countries", nil)
+	getAllReqRecorder := newRequestRecorder(getAllReq, mux)
+	assert.Equal(t, http.StatusOK, getAllReqRecorder.Code)
+	assert.Equal(t, "[]", getAllReqRecorder.Body.String())
+
+	getRandomReq, _ := http.NewRequest("GET", "/countries/random", nil)
+	getRandomReqRecorder := newRequestRecorder(getRandomReq, mux)
+
+	assert.Equal(t, http.StatusNotFound, getRandomReqRecorder.Code)
+	assert.Equal(t, "No countries available to choose randomly", getRandomReqRecorder.Body.String())
 }
 
 func constructCountryFromJson(jsonData string) *model.Country {

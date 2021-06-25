@@ -72,7 +72,7 @@ func (s *Server) getCountry(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if parts[2] == "random" {
-		s.Actions.GetRandomCountryId()
+		s.getRandomCountry(writer, request)
 		return
 	}
 
