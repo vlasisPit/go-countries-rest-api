@@ -45,9 +45,7 @@ func (s *Server) get(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	writer.Header().Add("content-type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-	writer.Write(jsonBytes)
+	utils.ConstructSuccessfulResponse(writer, http.StatusOK, jsonBytes)
 }
 
 func (s *Server) getRandomCountry(writer http.ResponseWriter, request *http.Request) {
@@ -90,9 +88,7 @@ func (s *Server) getCountry(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	writer.Header().Add("content-type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-	writer.Write(jsonBytes)
+	utils.ConstructSuccessfulResponse(writer, http.StatusOK, jsonBytes)
 }
 
 func (s *Server) post(writer http.ResponseWriter, request *http.Request) {
@@ -132,8 +128,7 @@ func (s *Server) deleteCountry(writer http.ResponseWriter, request *http.Request
 
 	s.Actions.DeleteCountry(parts[2])
 
-	writer.Header().Add("content-type", "application/json")
-	writer.WriteHeader(http.StatusOK)
+	utils.ConstructSuccessfulResponse(writer, http.StatusOK, nil)
 }
 
 /**

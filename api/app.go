@@ -2,7 +2,7 @@ package api
 
 import (
 	"go-countries-rest-api/api/store"
-	server "go-countries-rest-api/api/server"
+	"go-countries-rest-api/api/server"
 	"net/http"
 )
 
